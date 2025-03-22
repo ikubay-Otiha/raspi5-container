@@ -1,0 +1,7 @@
+.venv
+.vscode
+/build
+/cpp
+/python
+/docker
+/swift

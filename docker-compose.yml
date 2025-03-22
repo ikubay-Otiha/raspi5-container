@@ -1,0 +1,64 @@
+version: '3'
+services:
+  py_monitor:
+    container_name: py_monitor
+    build:
+      context: ./python/py_monitor
+    expose:
+      - "3000"
+    # ports:
+    #   - "3000:3000"
+    volumes:
+      # mount only source code
+      - ./python/py_monitor/src:/app/src
+      # mount host proc
+      - /proc:/host_proc:ro
+      # mount thermal zone
+      - /sys/class/thermal:/sys/class/thermal:ro
+    environment:
+      - PSUTIL_PROCFS_PATH=/host_proc
+    privileged: true
+    restart: unless-stopped
+    networks:
+      app-network:
+        ipv4_address: 192.168.96.5 # 固定IP
+
+  py_tg_fe:
+    container_name: py_TG_fe
+    build:
+      context: ./python/py_TG_fe
+    expose:
+      - "3020"
+    # ports:
+    #   - "3020:3020"
+    environment:
+      - BACKEND_URL=http://nginx_proxy/cpp/transcription
+    volumes:
+      - ./python/py_TG_fe:/app
+    networks:
+      app-network:
+        ipv4_address: 192.168.96.10 # 固定IP
+    restart: unless-stopped
+
+  nginx_proxy:
+    container_name: nginx_proxy
+    build:
+      context: ./docker/TG
+    ports:
+      - "80:80"
+    volumes:
+      - /sys/class/thermal:/sys/class/thermal:ro
+    depends_on:
+      # - transcription_backend
+      - py_monitor
+    restart: unless-stopped
+    networks:
+      app-network:
+        ipv4_address: 192.168.96.15 # 固定IP
+
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.96.0/24
